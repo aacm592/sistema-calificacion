@@ -32,14 +32,28 @@ export default function JuradoIngresoPage() {
     identidad: '', propuesta: ''
   });
 
+  // NUEVO ESTADO: Almacena el ID persistente del jurado
+  const [miJuradoId, setMiJuradoId] = useState<string | null>(null);
+
   useEffect(() => {
+    // Generación o recuperación del ID persistente
+    let idGuardado = localStorage.getItem('juradoId');
+    if (!idGuardado) {
+      idGuardado = 'jurado-' + Date.now().toString();
+      localStorage.setItem('juradoId', idGuardado);
+    }
+
+    setMiJuradoId(idGuardado);
+
+    const miId = idGuardado;
+
     const socket = getSocket();
 
     socket.on('estadoActualizado', (estado: any) => {
       setGrupos(estado.grupos || []);
       
-      // Verificar el estado de este jurado específico
-      const miUsuario = (estado.jurados || []).find((j: Jurado) => j.id === socket.id);
+      // Validamos el estado del jurado usando el ID persistente
+      const miUsuario = (estado.jurados || []).find((j: Jurado) => j.id === miId);
       if (miUsuario) {
         if (miUsuario.aceptado) {
           setFase('DASHBOARD');
@@ -57,7 +71,10 @@ export default function JuradoIngresoPage() {
   const handleSolicitarUnion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre.trim()) return;
-    getSocket().emit('solicitarUnion', { nombre, foto });
+    
+    // Recuperamos el ID persistente y lo enviamos al servidor
+    const miId = localStorage.getItem('juradoId');
+    getSocket().emit('solicitarUnion', { id: miId, nombre, foto });
   };
 
   const handleNotaChange = (campo: string, valor: string, maximo: number) => {
@@ -71,6 +88,23 @@ export default function JuradoIngresoPage() {
     return Object.values(notas).reduce((acc, curr) => acc + (Number(curr) || 0), 0);
   };
 
+  const abrirFormulario = (grupo: Grupo) => {
+    setGrupoSeleccionado(grupo);
+    const califPrevia = grupo.calificaciones.find(c => c.juradoId === miJuradoId);
+    
+    // Si ya existe una calificación con su desglose, la cargamos al estado
+    if (califPrevia && califPrevia.puntajes.detalles) {
+      setNotas(califPrevia.puntajes.detalles);
+    } else {
+      // Si es nueva o no tiene desglose, limpiamos el formulario
+      setNotas({
+        afinacion: '', armonia: '', vocal: '', coordinacion: '', tecnico: '',
+        escenario: '', expresividad: '', conexion: '', presencia: '',
+        vestimenta: '', cuerpo: '', barra: '', identidad: '', propuesta: ''
+      });
+    }
+  };
+
   const enviarCalificacion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!grupoSeleccionado) return;
@@ -81,17 +115,19 @@ export default function JuradoIngresoPage() {
       expresion: Number(notas.escenario) + Number(notas.expresividad) + Number(notas.conexion) + Number(notas.presencia),
       presentacion: Number(notas.vestimenta) + Number(notas.cuerpo) + Number(notas.barra),
       originalidad: Number(notas.identidad) + Number(notas.propuesta),
-      total: total
+      total: total,
+      detalles: notas // <-- Guardamos el desglose exacto para recuperarlo después
     };
 
+    const miId = localStorage.getItem('juradoId');
+
     getSocket().emit('enviarCalificacion', {
-      juradoId: getSocket().id,
+      juradoId: miId, 
       grupoId: grupoSeleccionado.id,
       puntajes: estructuraPuntajes
     });
 
-    setGrupoSeleccionado(null); // Cierra la pestaña tras calificar
-    // Reiniciar notas
+    setGrupoSeleccionado(null);
     setNotas({
       afinacion: '', armonia: '', vocal: '', coordinacion: '', tecnico: '',
       escenario: '', expresividad: '', conexion: '', presencia: '',
@@ -143,14 +179,25 @@ export default function JuradoIngresoPage() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {grupos.map((grupo) => {
-            const yaCalificado = grupo.calificaciones.some(c => c.juradoId === getSocket().id);
+            // Verificamos usando el estado miJuradoId en lugar de getSocket().id
+            const yaCalificado = grupo.calificaciones.some(c => c.juradoId === miJuradoId);
+            
             return (
               <div key={grupo.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between">
                 <h3 className="text-xl font-bold text-gray-800 mb-4">{grupo.nombre}</h3>
+                
                 {yaCalificado ? (
-                  <span className="bg-green-100 text-green-700 text-sm font-bold py-2 px-4 rounded-lg text-center">Evaluación Completada</span>
+                  <button 
+                    onClick={() => abrirFormulario(grupo)} 
+                    className="bg-[#e8af2e] hover:bg-[#d49f25] text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-sm"
+                  >
+                    Editar Calificación
+                  </button>
                 ) : (
-                  <button onClick={() => setGrupoSeleccionado(grupo)} className="bg-[#029062] hover:bg-[#01704b] text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                  <button 
+                    onClick={() => abrirFormulario(grupo)} 
+                    className="bg-[#029062] hover:bg-[#01704b] text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-sm"
+                  >
                     Calificar
                   </button>
                 )}

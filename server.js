@@ -47,6 +47,15 @@ app.prepare().then(() => {
       io.emit('estadoActualizado', estadoConcurso);
     });
 
+    // -- EN LA SECCIÓN DE EVENTOS DE GRUPOS --
+    socket.on('editarGrupo', ({ id, nuevoNombre }) => {
+      // Usamos .map para crear una nueva referencia en memoria (Inmutabilidad)
+      estadoConcurso.grupos = estadoConcurso.grupos.map(g => 
+        g.id === id ? { ...g, nombre: nuevoNombre } : g
+      );
+      io.emit('estadoActualizado', estadoConcurso);
+    });
+
     // -- EVENTOS DE JURADOS --
     socket.on('aceptarJurado', (id) => {
       const jurado = estadoConcurso.jurados.find(j => j.id === id);
@@ -60,19 +69,27 @@ app.prepare().then(() => {
     });
 
     // -- NUEVOS EVENTOS DE JURADOS --
+    // -- EN LA SECCIÓN DE EVENTOS DE JURADOS --
     socket.on('solicitarUnion', (datos) => {
-      const nuevoJurado = {
-        id: socket.id, // El ID del socket identifica la sesión del jurado
-        nombre: datos.nombre,
-        foto: datos.foto || '',
-        aceptado: false
-      };
+      const juradoId = datos.id; // Ahora recibimos el ID persistente desde el cliente
       
-      const existe = estadoConcurso.jurados.find(j => j.id === socket.id);
+      const existe = estadoConcurso.jurados.find(j => j.id === juradoId);
+      
       if (!existe) {
+        const nuevoJurado = {
+          id: juradoId,
+          nombre: datos.nombre,
+          foto: datos.foto || '',
+          aceptado: false
+        };
         estadoConcurso.jurados.push(nuevoJurado);
-        io.emit('estadoActualizado', estadoConcurso);
+      } else {
+        // Si el jurado ya existe (recargó la página), actualizamos sus datos
+        existe.nombre = datos.nombre;
+        if (datos.foto) existe.foto = datos.foto;
       }
+      
+      io.emit('estadoActualizado', estadoConcurso);
     });
 
     socket.on('enviarCalificacion', ({ juradoId, grupoId, puntajes }) => {
