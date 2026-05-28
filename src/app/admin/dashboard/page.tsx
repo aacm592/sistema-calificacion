@@ -7,7 +7,14 @@ import { Navbar } from '@/components/layout/Navbar';
 interface Calificacion {
   juradoId: string;
   nombre: string;
-  puntajes: { total: number };
+  puntajes: { 
+    total: number;
+    interpretacion?: number;
+    expresion?: number;
+    presentacion?: number;
+    originalidad?: number;
+    detalles?: any; // Contendrá el desglose exacto (afinacion, armonia, etc.)
+  };
 }
 
 interface Grupo {
@@ -34,6 +41,9 @@ export default function DashboardPage() {
   // Estados para la edición de grupos
   const [grupoEditandoId, setGrupoEditandoId] = useState<string | null>(null);
   const [nombreEditado, setNombreEditado] = useState('');
+  
+  // NUEVO ESTADO: Controla el modal de detalles
+  const [grupoDetalles, setGrupoDetalles] = useState<Grupo | null>(null);
 
   useEffect(() => {
     const socket = getSocket();
@@ -234,6 +244,7 @@ export default function DashboardPage() {
                         ))}
                         
                         <th className="p-4 font-bold whitespace-nowrap text-center text-[#e8af2e]">PROMEDIO</th>
+                        <th className="p-4 font-bold whitespace-nowrap text-center text-white">ACCIONES</th>
                       </tr>
                     </thead>
                     <tbody className="text-gray-800 text-sm">
@@ -263,6 +274,16 @@ export default function DashboardPage() {
                             <td className="p-4 text-center font-extrabold text-lg text-[#029062] bg-green-50">
                               {g.puntajePromedioFinal ? g.puntajePromedioFinal.toFixed(2) : '0.00'}
                             </td>
+                            
+                            {/* NUEVO: Botón de Detalles */}
+                            <td className="p-4 text-center">
+                              <button 
+                                onClick={() => setGrupoDetalles(g)}
+                                className="bg-[#453A96] hover:bg-[#362d7a] text-white text-xs font-bold py-2 px-3 rounded shadow transition-colors"
+                              >
+                                Ver detalles
+                              </button>
+                            </td>
                           </tr>
                         ))
                       )}
@@ -271,6 +292,81 @@ export default function DashboardPage() {
                 </div>
               </div>
             </>
+          )}
+
+        {/* MODAL DE DETALLES DE CALIFICACIÓN */}
+          {grupoDetalles && (
+            <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
+              <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative animate-fade-in">
+                
+                {/* Cabecera del Modal */}
+                <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex justify-between items-center z-10">
+                  <h2 className="text-2xl font-bold text-[#0e2043]">
+                    Desglose: <span className="text-[#029062]">{grupoDetalles.nombre}</span>
+                  </h2>
+                  <button onClick={() => setGrupoDetalles(null)} className="text-gray-400 hover:text-red-500 font-bold text-3xl leading-none">&times;</button>
+                </div>
+
+                {/* Contenido del Modal */}
+                <div className="p-6">
+                  {grupoDetalles.calificaciones.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">Ningún jurado ha calificado a este grupo todavía.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {grupoDetalles.calificaciones.map((calif) => (
+                        <div key={calif.juradoId} className="border border-gray-200 rounded-xl p-5 bg-gray-50 shadow-sm">
+                          <h3 className="text-lg font-bold text-[#223164] border-b border-gray-200 pb-3 mb-4 flex justify-between">
+                            <span>{calif.nombre}</span>
+                            <span className="text-[#e8af2e]">{calif.puntajes.total} / 100</span>
+                          </h3>
+
+                          {calif.puntajes.detalles ? (
+                            <div className="space-y-4 text-sm text-gray-700">
+                              <div>
+                                <h4 className="font-bold text-[#029062]">A) Interpretación ({calif.puntajes.interpretacion}/60)</h4>
+                                <ul className="ml-4 mt-1 space-y-1 list-disc">
+                                  <li>Afinación y precisión: {calif.puntajes.detalles.afinacion}</li>
+                                  <li>Armonía: {calif.puntajes.detalles.armonia}</li>
+                                  <li>Calidad vocal e inst: {calif.puntajes.detalles.vocal}</li>
+                                  <li>Coordinación grupal: {calif.puntajes.detalles.coordinacion}</li>
+                                  <li>Dominio técnico: {calif.puntajes.detalles.tecnico}</li>
+                                </ul>
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-[#029062]">B) Expresión Escénica ({calif.puntajes.expresion}/20)</h4>
+                                <ul className="ml-4 mt-1 space-y-1 list-disc">
+                                  <li>Dominio escenario: {calif.puntajes.detalles.escenario}</li>
+                                  <li>Expresividad: {calif.puntajes.detalles.expresividad}</li>
+                                  <li>Conexión con público: {calif.puntajes.detalles.conexion}</li>
+                                  <li>Presencia escénica: {calif.puntajes.detalles.presencia}</li>
+                                </ul>
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-[#029062]">C) Presentación ({calif.puntajes.presentacion}/10)</h4>
+                                <ul className="ml-4 mt-1 space-y-1 list-disc">
+                                  <li>Vestimenta y estética: {calif.puntajes.detalles.vestimenta}</li>
+                                  <li>Cuerpo de baile: {calif.puntajes.detalles.cuerpo}</li>
+                                  <li>Barra organizada: {calif.puntajes.detalles.barra}</li>
+                                </ul>
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-[#029062]">D) Originalidad ({calif.puntajes.originalidad}/10)</h4>
+                                <ul className="ml-4 mt-1 space-y-1 list-disc">
+                                  <li>Identidad cultural: {calif.puntajes.detalles.identidad}</li>
+                                  <li>Propuesta artística: {calif.puntajes.detalles.propuesta}</li>
+                                </ul>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 italic text-sm">Los detalles individuales de esta calificación no están disponibles (registro antiguo).</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
 
         </main>
