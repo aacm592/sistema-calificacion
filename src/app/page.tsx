@@ -33,7 +33,7 @@ export default function Home() {
           <RoleCard
             title="Soy administrador"
             iconPath="/images/admin-icon.svg"
-            href="/auth/admin"
+            href="/admin"
             buttonColor="bg-[#223164] hover:bg-[#0e2043]"
           />
           

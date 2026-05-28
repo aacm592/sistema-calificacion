@@ -3,33 +3,43 @@ import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
 export async function middleware(request: NextRequest) {
-  // Obtenemos la cookie del token
   const token = request.cookies.get('admin_token')?.value;
+  const { pathname } = request.nextUrl;
 
-  // Si no hay token, redirigimos al login
+  // 1. Permitir acceso libre a la página de login
+  if (pathname === '/admin') {
+    // Si ya existe un token válido y visita el login, lo redirigimos al dashboard
+    if (token) {
+      try {
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+        await jwtVerify(token, secret);
+        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+      } catch (error) {
+        // Token inválido (expirado), simplemente se queda en el login
+      }
+    }
+    return NextResponse.next();
+  }
+
+  // 2. Proteger las rutas internas de administración (ej. /admin/dashboard)
   if (!token) {
     return NextResponse.redirect(new URL('/admin', request.url));
   }
 
   try {
-    // Verificamos el token usando la misma clave secreta
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     await jwtVerify(token, secret);
-    
-    // Si es válido, permitimos el paso
     return NextResponse.next();
   } catch (error) {
-    // Si el token expiró o fue alterado, lo borramos y redirigimos
+    // Token alterado o caducado al intentar acceder a rutas protegidas
     const response = NextResponse.redirect(new URL('/admin', request.url));
     response.cookies.delete('admin_token');
     return response;
   }
 }
 
-// Configuración para indicar en qué rutas se debe ejecutar este middleware
 export const config = {
   matcher: [
-    // Protege todas las rutas hijas de /admin, por ejemplo: /admin/dashboard
     '/admin/:path*'
   ],
 };
