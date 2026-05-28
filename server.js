@@ -30,6 +30,34 @@ app.prepare().then(() => {
     socket.on('disconnect', () => {
       console.log(`[Socket] Cliente desconectado: ${socket.id}`);
     });
+    // -- EVENTOS DE GRUPOS --
+    socket.on('agregarGrupo', (nombre) => {
+      const nuevoGrupo = { 
+        id: Date.now().toString(), 
+        nombre, 
+        calificaciones: [], 
+        puntajePromedioFinal: 0 
+      };
+      estadoConcurso.grupos.push(nuevoGrupo);
+      io.emit('estadoActualizado', estadoConcurso);
+    });
+
+    socket.on('eliminarGrupo', (id) => {
+      estadoConcurso.grupos = estadoConcurso.grupos.filter(g => g.id !== id);
+      io.emit('estadoActualizado', estadoConcurso);
+    });
+
+    // -- EVENTOS DE JURADOS --
+    socket.on('aceptarJurado', (id) => {
+      const jurado = estadoConcurso.jurados.find(j => j.id === id);
+      if (jurado) jurado.aceptado = true;
+      io.emit('estadoActualizado', estadoConcurso);
+    });
+
+    socket.on('rechazarJurado', (id) => {
+      estadoConcurso.jurados = estadoConcurso.jurados.filter(j => j.id !== id);
+      io.emit('estadoActualizado', estadoConcurso);
+    });
   });
 
   httpServer.listen(port, () => {
