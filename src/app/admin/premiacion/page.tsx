@@ -29,13 +29,8 @@ function CeremoniaContenido() {
     return () => { socket.off('estadoActualizado'); };
   }, [topN, fase]);
 
-  if (fase === 'CARGANDO' || grupos.length === 0) {
-    return <div className="min-h-screen bg-slate-900 flex justify-center items-center text-white text-3xl">Cargando resultados oficiales...</div>;
-  }
-
-  const ganadorActual = grupos[posicionActual - 1];
-
-  // Controladores de transición
+  // Controladores de transición (Deben ir antes del return condicional)
+  // Controladores de transición (Deben ir antes del return condicional)
   const revelarLugar = () => setFase('REVELADO');
   const siguienteLugar = () => {
     if (posicionActual > 1) {
@@ -45,6 +40,60 @@ function CeremoniaContenido() {
       setFase('PODIO');
     }
   };
+  
+  // NUEVO: Lógica de retroceso
+  const anteriorLugar = () => {
+    if (fase === 'PODIO') {
+      setPosicionActual(1);
+      setFase('REVELADO');
+    } else if (fase === 'REVELADO') {
+      setFase('ESPERA');
+    } else if (fase === 'ESPERA' && posicionActual < topN) {
+      setPosicionActual(prev => prev + 1);
+      setFase('REVELADO');
+    }
+  };
+
+  // Escuchador de teclado (Siempre debe llamarse a nivel superior, antes del return)
+  useEffect(() => {
+    const manejarTeclado = (e: KeyboardEvent) => {
+      // Avanzar
+      if (e.code === 'Space' || e.key === 'Enter' || e.key === 'ArrowRight') {
+        e.preventDefault(); 
+        if (fase === 'ESPERA') revelarLugar();
+        else if (fase === 'REVELADO') siguienteLugar();
+      } 
+      // Retroceder
+      else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        anteriorLugar();
+      }
+    };
+
+    window.addEventListener('keydown', manejarTeclado);
+    return () => window.removeEventListener('keydown', manejarTeclado);
+  }, [fase, posicionActual, topN]);
+
+  // Escuchador de teclado (Siempre debe llamarse a nivel superior, antes del return)
+  useEffect(() => {
+    const manejarTeclado = (e: KeyboardEvent) => {
+      if (e.code === 'Space' || e.key === 'Enter' || e.key === 'ArrowRight') {
+        e.preventDefault(); 
+        if (fase === 'ESPERA') revelarLugar();
+        else if (fase === 'REVELADO') siguienteLugar();
+      }
+    };
+
+    window.addEventListener('keydown', manejarTeclado);
+    return () => window.removeEventListener('keydown', manejarTeclado);
+  }, [fase, posicionActual]);
+
+  // AHORA SÍ, EL RETURN CONDICIONAL
+  if (fase === 'CARGANDO' || grupos.length === 0) {
+    return <div className="min-h-screen bg-slate-900 flex justify-center items-center text-white text-3xl">Cargando resultados oficiales...</div>;
+  }
+
+  const ganadorActual = grupos[posicionActual - 1];
 
   // --- RENDERIZADO DEL PODIO FINAL ---
   if (fase === 'PODIO') {
@@ -130,18 +179,14 @@ function CeremoniaContenido() {
         </div>
       )}
 
-      {/* Controles de Administrador (Ocultos a simple vista, visibles al pasar el ratón por abajo) */}
-      <div className="fixed bottom-0 w-full p-6 flex justify-center opacity-10 hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-black to-transparent">
-        {fase === 'ESPERA' ? (
-          <button onClick={revelarLugar} className="bg-[#453A96] hover:bg-[#362d7a] text-white font-bold py-3 px-8 rounded-full shadow-2xl text-xl">
-            Revelar Ganador
-          </button>
-        ) : (
-          <button onClick={siguienteLugar} className="bg-[#029062] hover:bg-[#01704b] text-white font-bold py-3 px-8 rounded-full shadow-2xl text-xl">
-            {posicionActual > 1 ? 'Siguiente Lugar' : 'Mostrar Podio Final'}
-          </button>
-        )}
-      </div>
+      {/* Control discreto de respaldo (casi invisible) */}
+      <button 
+        onClick={fase === 'ESPERA' ? revelarLugar : siguienteLugar}
+        className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-white opacity-5 hover:opacity-20 text-black flex justify-center items-center text-xl font-bold transition-opacity z-50 cursor-pointer"
+        title="Avanzar (También puedes usar Espacio, Enter o Flecha Derecha)"
+      >
+        &gt;
+      </button>
     </main>
   );
 }

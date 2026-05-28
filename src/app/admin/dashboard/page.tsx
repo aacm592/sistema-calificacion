@@ -486,7 +486,7 @@ D) Originalidad e Identidad (${c.puntajes.originalidad || 0}/10)
                     max={grupos.length || 10}
                     value={topN}
                     onChange={(e) => setTopN(Number(e.target.value))}
-                    className="w-32 px-4 py-3 text-2xl text-center border-2 border-gray-300 rounded-xl focus:border-[#453A96] focus:outline-none"
+                    className="w-32 px-4 py-3 text-2xl text-center font-bold text-gray-900 bg-gray-50 border-2 border-gray-300 rounded-xl focus:border-[#453A96] focus:outline-none"
                   />
                 </div>
                 
