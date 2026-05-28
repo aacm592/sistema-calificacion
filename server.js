@@ -18,7 +18,6 @@ let estadoConcurso = {
 };
 
 app.prepare().then(() => {
-  app.prepare().then(() => {
   const httpServer = createServer((req, res) => {
     // Interceptor ligero para el Keep-Alive
     if (req.url === '/api/keep-alive') {
