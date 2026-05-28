@@ -52,7 +52,6 @@ export default function JuradoIngresoPage() {
     socket.on('estadoActualizado', (estado: any) => {
       setGrupos(estado.grupos || []);
       
-      // Validamos el estado del jurado usando el ID persistente
       const miUsuario = (estado.jurados || []).find((j: Jurado) => j.id === miId);
       if (miUsuario) {
         if (miUsuario.aceptado) {
@@ -60,6 +59,10 @@ export default function JuradoIngresoPage() {
         } else {
           setFase('ESPERA');
         }
+      } else {
+        // NUEVO: Si el usuario ya no existe en el servidor (fue eliminado o rechazado),
+        // lo forzamos a volver a la pantalla inicial de Login.
+        setFase('LOGIN');
       }
     });
 
@@ -206,7 +209,7 @@ export default function JuradoIngresoPage() {
           })}
         </div>
 
-        {/* PESTAÑA / MODAL DE CALIFICACIÓN */}
+        {/* PESTAÑA DE MODAL DE CALIFICACIÓN */}
         {grupoSeleccionado && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-end z-50">
             <div className="bg-white w-full max-w-lg h-full overflow-y-auto shadow-2xl p-6 animate-fade-in-left">

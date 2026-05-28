@@ -9,11 +9,11 @@ const port = 3000;
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
-// Estado global en memoria (Nuestra "Base de Datos")
+// Estado global en memoria
 let estadoConcurso = {
   administradorAutenticado: false,
-  jurados: [], // Estructura: { id, nombre, aceptado }
-  grupos: [],  // Estructura: { id, nombre, calificaciones, puntajePromedioFinal }
+  jurados: [],
+  grupos: [],
   eventoActivo: false
 };
 
@@ -23,22 +23,15 @@ app.prepare().then(() => {
 
   io.on('connection', (socket) => {
     console.log(`[Socket] Cliente conectado: ${socket.id}`);
-
-    // Al conectarse, enviamos el estado actual
     socket.emit('estadoActualizado', estadoConcurso);
 
     socket.on('disconnect', () => {
       console.log(`[Socket] Cliente desconectado: ${socket.id}`);
     });
+
     // -- EVENTOS DE GRUPOS --
     socket.on('agregarGrupo', (nombre) => {
-      const nuevoGrupo = { 
-        id: Date.now().toString(), 
-        nombre, 
-        calificaciones: [], 
-        puntajePromedioFinal: 0 
-      };
-      estadoConcurso.grupos.push(nuevoGrupo);
+      estadoConcurso.grupos.push({ id: Date.now().toString(), nombre, calificaciones: [], puntajePromedioFinal: 0 });
       io.emit('estadoActualizado', estadoConcurso);
     });
 
@@ -47,12 +40,8 @@ app.prepare().then(() => {
       io.emit('estadoActualizado', estadoConcurso);
     });
 
-    // -- EN LA SECCIÓN DE EVENTOS DE GRUPOS --
     socket.on('editarGrupo', ({ id, nuevoNombre }) => {
-      // Usamos .map para crear una nueva referencia en memoria (Inmutabilidad)
-      estadoConcurso.grupos = estadoConcurso.grupos.map(g => 
-        g.id === id ? { ...g, nombre: nuevoNombre } : g
-      );
+      estadoConcurso.grupos = estadoConcurso.grupos.map(g => g.id === id ? { ...g, nombre: nuevoNombre } : g);
       io.emit('estadoActualizado', estadoConcurso);
     });
 
@@ -68,27 +57,15 @@ app.prepare().then(() => {
       io.emit('estadoActualizado', estadoConcurso);
     });
 
-    // -- NUEVOS EVENTOS DE JURADOS --
-    // -- EN LA SECCIÓN DE EVENTOS DE JURADOS --
     socket.on('solicitarUnion', (datos) => {
-      const juradoId = datos.id; // Ahora recibimos el ID persistente desde el cliente
-      
+      const juradoId = datos.id;
       const existe = estadoConcurso.jurados.find(j => j.id === juradoId);
-      
       if (!existe) {
-        const nuevoJurado = {
-          id: juradoId,
-          nombre: datos.nombre,
-          foto: datos.foto || '',
-          aceptado: false
-        };
-        estadoConcurso.jurados.push(nuevoJurado);
+        estadoConcurso.jurados.push({ id: juradoId, nombre: datos.nombre, foto: datos.foto || '', aceptado: false });
       } else {
-        // Si el jurado ya existe (recargó la página), actualizamos sus datos
         existe.nombre = datos.nombre;
         if (datos.foto) existe.foto = datos.foto;
       }
-      
       io.emit('estadoActualizado', estadoConcurso);
     });
 
@@ -97,7 +74,6 @@ app.prepare().then(() => {
       const jurado = estadoConcurso.jurados.find(j => j.id === juradoId);
 
       if (grupo && jurado) {
-        // Buscar si el jurado ya había calificado a este grupo para actualizar o insertar
         const index = grupo.calificaciones.findIndex(c => c.juradoId === juradoId);
         const nuevaCalificacion = { juradoId, nombre: jurado.nombre, puntajes };
         
@@ -107,16 +83,50 @@ app.prepare().then(() => {
           grupo.calificaciones.push(nuevaCalificacion);
         }
 
-        // Sumatoria y promedio automático
         let sumaTotal = 0;
-        grupo.calificaciones.forEach(c => {
-          sumaTotal += c.puntajes.total;
-        });
-        // Calculamos el promedio dividiendo la suma total entre la cantidad de jurados que han calificado
+        grupo.calificaciones.forEach(c => { sumaTotal += c.puntajes.total; });
         grupo.puntajePromedioFinal = sumaTotal / grupo.calificaciones.length;
-
         io.emit('estadoActualizado', estadoConcurso);
       }
+    });
+
+    // -- EVENTO DE ELIMINACIÓN CON TRAZABILIDAD --
+    socket.on('eliminarJurado', (id) => {
+      console.log(`\n--- INICIO DE ELIMINACIÓN ---`);
+      console.log(`[Servidor] Solicitud de eliminación recibida para el ID:`, id);
+      
+      const juradoIndex = estadoConcurso.jurados.findIndex(j => j.id === id);
+      if (juradoIndex === -1) {
+        console.log(`[Servidor] ERROR: No se encontró al jurado en la memoria.`);
+        return;
+      }
+
+      // 1. Eliminar jurado de la memoria
+      estadoConcurso.jurados.splice(juradoIndex, 1);
+      console.log(`[Servidor] Jurado borrado. Jurados restantes en el sistema:`, estadoConcurso.jurados.length);
+      
+      // 2. Limpieza en cascada de sus notas
+      let notasBorradas = 0;
+      estadoConcurso.grupos.forEach(grupo => {
+        const califIndex = grupo.calificaciones.findIndex(c => c.juradoId === id);
+        if (califIndex !== -1) {
+          grupo.calificaciones.splice(califIndex, 1);
+          notasBorradas++;
+          
+          if (grupo.calificaciones.length === 0) {
+            grupo.puntajePromedioFinal = 0;
+          } else {
+            let sumaTotal = 0;
+            grupo.calificaciones.forEach(c => { sumaTotal += c.puntajes.total; });
+            grupo.puntajePromedioFinal = sumaTotal / grupo.calificaciones.length;
+          }
+        }
+      });
+      
+      console.log(`[Servidor] Se purgaron ${notasBorradas} calificaciones de este jurado de todos los grupos.`);
+      console.log(`--- FIN DE ELIMINACIÓN ---\n`);
+      
+      io.emit('estadoActualizado', estadoConcurso);
     });
   });
 

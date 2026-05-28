@@ -74,6 +74,14 @@ export default function DashboardPage() {
     }
   };
 
+  const handleEliminarJurado = (id: string) => {
+    console.log("Intentando emitir evento eliminarJurado con ID:", id); // LOG DE CLIENTE
+    const confirmado = window.confirm('¿Estás seguro de eliminar a este jurado? Se borrarán de forma irreversible todas las calificaciones que haya emitido y los promedios se recalcularán.');
+    if (confirmado) {
+      getSocket().emit('eliminarJurado', id);
+    }
+  };
+
   const iniciarEdicion = (grupo: Grupo) => {
     setGrupoEditandoId(grupo.id);
     setNombreEditado(grupo.nombre);
@@ -198,9 +206,18 @@ export default function DashboardPage() {
                       {juradosAceptados.map((jurado) => (
                         <li key={jurado.id} className="flex justify-between items-center bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
                           <span className="text-gray-800">{jurado.nombre}</span>
-                          <span className="text-[#029062] text-sm font-bold flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-[#029062]"></span> Activo
-                          </span>
+                          <div className="flex items-center gap-4">
+                            <span className="text-[#029062] text-sm font-bold flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-[#029062]"></span> Activo
+                            </span>
+                            <button 
+                              onClick={() => handleEliminarJurado(jurado.id)}
+                              className="text-red-500 hover:text-red-700 text-sm font-medium transition-colors cursor-pointer"
+                              title="Eliminar jurado del sistema"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -297,7 +314,7 @@ export default function DashboardPage() {
         {/* MODAL DE DETALLES DE CALIFICACIÓN */}
           {grupoDetalles && (
             <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
-              <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative animate-fade-in">
+              <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-2xl relative animate-fade-in">
                 
                 {/* Cabecera del Modal */}
                 <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex justify-between items-center z-10">
@@ -312,7 +329,7 @@ export default function DashboardPage() {
                   {grupoDetalles.calificaciones.length === 0 ? (
                     <p className="text-gray-500 text-center py-8">Ningún jurado ha calificado a este grupo todavía.</p>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {grupoDetalles.calificaciones.map((calif) => (
                         <div key={calif.juradoId} className="border border-gray-200 rounded-xl p-5 bg-gray-50 shadow-sm">
                           <h3 className="text-lg font-bold text-[#223164] border-b border-gray-200 pb-3 mb-4 flex justify-between">
