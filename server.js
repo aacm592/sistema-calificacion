@@ -3,8 +3,10 @@ const next = require('next');
 const { Server } = require('socket.io');
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
-const port = 3000;
+// '0.0.0.0' expone el servidor a todas las interfaces de red del contenedor
+const hostname = process.env.HOSTNAME || '0.0.0.0'; 
+// Captura el puerto asignado por Render o usa 3000 localmente
+const port = parseInt(process.env.PORT, 10) || 3000;
 
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
@@ -143,7 +145,7 @@ app.prepare().then(() => {
     });
   });
 
-  httpServer.listen(port, () => {
-    console.log(`> Sistema inicializado y escuchando en http://${hostname}:${port}`);
+  httpServer.listen(port, '0.0.0.0', () => {
+    console.log(`> Sistema inicializado y escuchando en el puerto ${port}`);
   });
 });
