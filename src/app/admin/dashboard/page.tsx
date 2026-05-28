@@ -38,8 +38,9 @@ export default function DashboardPage() {
   const [jurados, setJurados] = useState<Jurado[]>([]);
   
   // Estados para el manejo de la UI
-  const [vistaActiva, setVistaActiva] = useState<'dashboard' | 'calificaciones'>('dashboard');
+  const [vistaActiva, setVistaActiva] = useState<'dashboard' | 'calificaciones' | 'premiacion'>('dashboard');
   const [nuevoGrupo, setNuevoGrupo] = useState('');
+  const [topN, setTopN] = useState(3); // NUEVO ESTADO: Cantidad de ganadores a mostrar
   
   // Estados para la edición de grupos
   const [grupoEditandoId, setGrupoEditandoId] = useState<string | null>(null);
@@ -282,6 +283,16 @@ D) Originalidad e Identidad (${c.puntajes.originalidad || 0}/10)
             >
               Calificaciones
             </button>
+            <button 
+              onClick={() => setVistaActiva('premiacion')}
+              className={`text-left flex items-center px-6 py-4 font-semibold transition-colors ${
+                vistaActiva === 'premiacion' 
+                  ? 'bg-[#f3f4f6] text-[#223164] border-r-4 border-[#223164]' 
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Ceremonia de Premiación
+            </button>
           </nav>
         </aside>
 
@@ -458,6 +469,36 @@ D) Originalidad e Identidad (${c.puntajes.originalidad || 0}/10)
                 </div>
               </div>
             </>
+          )}
+
+          {/* VISTA 3: CONFIGURACIÓN DE PREMIACIÓN */}
+          {vistaActiva === 'premiacion' && (
+            <div className="max-w-2xl mx-auto mt-12 bg-white rounded-2xl shadow-sm border border-gray-200 p-10 text-center">
+              <h1 className="text-4xl font-bold text-[#0e2043] mb-4">Gran Final</h1>
+              <p className="text-gray-600 mb-8">Configura la pantalla de presentación para proyectar a los ganadores del evento.</p>
+              
+              <div className="flex flex-col items-center gap-6">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-2">¿Cuántos lugares deseas premiar?</label>
+                  <input 
+                    type="number" 
+                    min="3" 
+                    max={grupos.length || 10}
+                    value={topN}
+                    onChange={(e) => setTopN(Number(e.target.value))}
+                    className="w-32 px-4 py-3 text-2xl text-center border-2 border-gray-300 rounded-xl focus:border-[#453A96] focus:outline-none"
+                  />
+                </div>
+                
+                <button 
+                  onClick={() => window.open(`/admin/premiacion?top=${topN}`, '_blank')}
+                  className="bg-[#e8af2e] hover:bg-[#d49f25] text-white text-lg font-bold py-4 px-10 rounded-xl shadow-lg transition-transform hover:scale-105 flex items-center gap-2"
+                >
+                  Iniciar Presentación (Nueva Pestaña)
+                </button>
+                <p className="text-sm text-gray-400 mt-2">Se abrirá en una nueva pestaña ideal para arrastrar a un proyector.</p>
+              </div>
+            </div>
           )}
 
         {/* MODAL DE DETALLES DE CALIFICACIÓN */}

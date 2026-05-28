@@ -24,3 +24,45 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Animaciones personalizadas para la Ceremonia de Premiación */
+@keyframes zoomIn {
+  0% { opacity: 0; transform: scale(0.3); }
+  50% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-zoom-in {
+  animation: zoomIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes bounceIn {
+  0% { opacity: 0; transform: translateY(50px); }
+  60% { opacity: 1; transform: translateY(-15px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-bounce-in {
+  animation: bounceIn 0.8s ease-out forwards;
+}
+
+@keyframes slideUp {
+  0% { opacity: 0; transform: translateY(100%); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slideUp 1s ease-out forwards;
+  opacity: 0; /* Asegura que no se vea antes del delay */
+}
+
+@keyframes goldShine {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.text-gold-shine {
+  background: linear-gradient(90deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: goldShine 3s linear infinite;
+  text-shadow: 0px 4px 20px rgba(191, 149, 63, 0.3);
+}
