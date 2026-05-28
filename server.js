@@ -3,11 +3,14 @@ const next = require('next');
 const { Server } = require('socket.io');
 
 const dev = process.env.NODE_ENV !== 'production';
-// '0.0.0.0' expone el servidor a todas las interfaces de red del contenedor
-const hostname = process.env.HOSTNAME || '0.0.0.0'; 
-// Captura el puerto asignado por Render o usa 3000 localmente
-const port = parseInt(process.env.PORT, 10) || 3000;
 
+// 1. CONFIGURACIÓN DE RED CRÍTICA PARA RENDER
+// 0.0.0.0 expone el servicio a todas las interfaces del contenedor
+const hostname = '0.0.0.0'; 
+// Captura el puerto dinámico de Render, o usa 3000 como respaldo local
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+
+// Inicializamos Next.js con los parámetros corregidos
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
@@ -21,7 +24,7 @@ let estadoConcurso = {
 
 app.prepare().then(() => {
   const httpServer = createServer((req, res) => {
-    // Interceptor ligero para el Keep-Alive
+    // Interceptor ligero para el Keep-Alive (UptimeRobot)
     if (req.url === '/api/keep-alive') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'activo', timestamp: Date.now() }));
@@ -30,10 +33,7 @@ app.prepare().then(() => {
     // Delegar el resto del tráfico a Next.js
     return handler(req, res);
   });
-  
-  const io = new Server(httpServer);
-  
-  // ... (El resto de tu lógica de WebSockets se mantiene exactamente igual)
+
   const io = new Server(httpServer);
 
   io.on('connection', (socket) => {
@@ -116,11 +116,9 @@ app.prepare().then(() => {
         return;
       }
 
-      // 1. Eliminar jurado de la memoria
       estadoConcurso.jurados.splice(juradoIndex, 1);
       console.log(`[Servidor] Jurado borrado. Jurados restantes en el sistema:`, estadoConcurso.jurados.length);
       
-      // 2. Limpieza en cascada de sus notas
       let notasBorradas = 0;
       estadoConcurso.grupos.forEach(grupo => {
         const califIndex = grupo.calificaciones.findIndex(c => c.juradoId === id);
@@ -145,7 +143,9 @@ app.prepare().then(() => {
     });
   });
 
-  httpServer.listen(port, '0.0.0.0', () => {
-    console.log(`> Sistema inicializado y escuchando en el puerto ${port}`);
+  // 2. VINCULACIÓN EXPLÍCITA
+  // Se obliga al servidor HTTP nativo a escuchar en la interfaz 0.0.0.0
+  httpServer.listen(port, hostname, () => {
+    console.log(`> Sistema inicializado y escuchando en la interfaz ${hostname} por el puerto ${port}`);
   });
 });
