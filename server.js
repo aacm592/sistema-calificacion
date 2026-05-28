@@ -18,7 +18,21 @@ let estadoConcurso = {
 };
 
 app.prepare().then(() => {
-  const httpServer = createServer(handler);
+  app.prepare().then(() => {
+  const httpServer = createServer((req, res) => {
+    // Interceptor ligero para el Keep-Alive
+    if (req.url === '/api/keep-alive') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'activo', timestamp: Date.now() }));
+      return;
+    }
+    // Delegar el resto del tráfico a Next.js
+    return handler(req, res);
+  });
+  
+  const io = new Server(httpServer);
+  
+  // ... (El resto de tu lógica de WebSockets se mantiene exactamente igual)
   const io = new Server(httpServer);
 
   io.on('connection', (socket) => {
