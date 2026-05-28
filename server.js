@@ -58,6 +58,49 @@ app.prepare().then(() => {
       estadoConcurso.jurados = estadoConcurso.jurados.filter(j => j.id !== id);
       io.emit('estadoActualizado', estadoConcurso);
     });
+
+    // -- NUEVOS EVENTOS DE JURADOS --
+    socket.on('solicitarUnion', (datos) => {
+      const nuevoJurado = {
+        id: socket.id, // El ID del socket identifica la sesión del jurado
+        nombre: datos.nombre,
+        foto: datos.foto || '',
+        aceptado: false
+      };
+      
+      const existe = estadoConcurso.jurados.find(j => j.id === socket.id);
+      if (!existe) {
+        estadoConcurso.jurados.push(nuevoJurado);
+        io.emit('estadoActualizado', estadoConcurso);
+      }
+    });
+
+    socket.on('enviarCalificacion', ({ juradoId, grupoId, puntajes }) => {
+      const grupo = estadoConcurso.grupos.find(g => g.id === grupoId);
+      const jurado = estadoConcurso.jurados.find(j => j.id === juradoId);
+
+      if (grupo && jurado) {
+        // Buscar si el jurado ya había calificado a este grupo para actualizar o insertar
+        const index = grupo.calificaciones.findIndex(c => c.juradoId === juradoId);
+        const nuevaCalificacion = { juradoId, nombre: jurado.nombre, puntajes };
+        
+        if (index !== -1) {
+          grupo.calificaciones[index] = nuevaCalificacion;
+        } else {
+          grupo.calificaciones.push(nuevaCalificacion);
+        }
+
+        // Sumatoria y promedio automático
+        let sumaTotal = 0;
+        grupo.calificaciones.forEach(c => {
+          sumaTotal += c.puntajes.total;
+        });
+        // Calculamos el promedio dividiendo la suma total entre la cantidad de jurados que han calificado
+        grupo.puntajePromedioFinal = sumaTotal / grupo.calificaciones.length;
+
+        io.emit('estadoActualizado', estadoConcurso);
+      }
+    });
   });
 
   httpServer.listen(port, () => {

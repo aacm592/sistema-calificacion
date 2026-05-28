@@ -40,7 +40,7 @@ export default function Home() {
           <RoleCard
             title="Soy jurado"
             iconPath="/images/jury-icon.svg"
-            href="/jury"
+            href="/jurado/ingreso"
             buttonColor="bg-[#e8af2e] hover:bg-[#d49f25]"
           />
         </section>
