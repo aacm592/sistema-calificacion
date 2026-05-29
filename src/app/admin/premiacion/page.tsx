@@ -1,189 +1,216 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import { getSocket } from '@/lib/socketClient';
+import { useSearchParams } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Link from 'next/link';
 
-interface Resultado {
-  grupoId: string;
-  nombreGrupo: string;
-  puntajeFinal: number;
-  juradosEvaluadores: number;
+interface GrupoCalificado {
+  id: string;
+  nombre: string;
+  calificaciones: any[];
+  puntajePromedioFinal: number;
 }
 
-export default function PremiacionPage() {
-  const [resultados, setResultados] = useState<Resultado[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState('');
+function CeremoniaContenido() {
+  const searchParams = useSearchParams();
+  const requestedTopN = Number(searchParams.get('top')) || 3;
+
+  const [grupos, setGrupos] = useState<GrupoCalificado[]>([]);
+  const [fase, setFase] = useState<'CARGANDO' | 'ESPERA' | 'REVELADO' | 'PODIO'>('CARGANDO');
+  const [posicionActual, setPosicionActual] = useState(requestedTopN);
 
   useEffect(() => {
-    const obtenerResultados = async () => {
-      try {
-        const res = await fetch('/api/resultados');
-        const data = await res.json();
-        
-        if (data.success) {
-          setResultados(data.data);
-        } else {
-          setError('Error al obtener los datos del servidor.');
-        }
-      } catch (err) {
-        setError('Error de red al conectar con la API.');
-      } finally {
-        setCargando(false);
+    const socket = getSocket();
+    
+    socket.emit('solicitarEstado');
+    
+    socket.on('estadoActualizado', (estado: any) => {
+      const validados = (estado.grupos || []).filter((g: any) => g.calificaciones.length > 0);
+      const ordenados = validados.sort((a: any, b: any) => b.puntajePromedioFinal - a.puntajePromedioFinal);
+      const gruposTop = ordenados.slice(0, requestedTopN);
+      
+      setGrupos(gruposTop);
+      
+      // Ajuste dinámico por si hay menos grupos calificados que el Top N solicitado
+      if (fase === 'CARGANDO' && gruposTop.length > 0) {
+        setPosicionActual(gruposTop.length);
+        setFase('ESPERA');
+      }
+    });
+
+    return () => { socket.off('estadoActualizado'); };
+  }, [requestedTopN, fase]);
+
+  // --- FUNCIONES DE EXPORTACIÓN ---
+  // --- CONTROLES DE NAVEGACIÓN ASINCRÓNICA ---
+  const avanzar = () => {
+    if (fase === 'ESPERA') {
+      setFase('REVELADO');
+    } else if (fase === 'REVELADO') {
+      if (posicionActual > 1) {
+        setPosicionActual(prev => prev - 1);
+        setFase('ESPERA');
+      } else {
+        setFase('PODIO');
+      }
+    }
+  };
+
+  const retroceder = () => {
+    if (fase === 'PODIO') {
+      setFase('REVELADO');
+      setPosicionActual(1);
+    } else if (fase === 'REVELADO') {
+      setFase('ESPERA');
+    } else if (fase === 'ESPERA') {
+      if (posicionActual < grupos.length) {
+        setPosicionActual(prev => prev + 1);
+        setFase('REVELADO');
+      }
+    }
+  };
+
+  // Captura de eventos de teclado para control remoto / presentación
+  useEffect(() => {
+    const manejarTeclado = (e: KeyboardEvent) => {
+      // Evitar conflictos con scroll si la pantalla es larga
+      if ([' ', 'ArrowRight', 'ArrowLeft'].includes(e.key)) {
+        e.preventDefault();
+      }
+
+      if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowRight') {
+        avanzar();
+      } else if (e.key === 'ArrowLeft') {
+        retroceder();
       }
     };
 
-    obtenerResultados();
-  }, []);
+    window.addEventListener('keydown', manejarTeclado);
+    return () => window.removeEventListener('keydown', manejarTeclado);
+  }, [fase, posicionActual, grupos.length]);
 
-  // Función para exportar a Excel
-  const exportarExcel = () => {
-    if (resultados.length === 0) return;
 
-    // 1. Mapear los datos a un formato plano para la hoja de cálculo
-    const datosExportar = resultados.map((resultado, index) => ({
-      'Posición': index + 1,
-      'Nombre del Grupo': resultado.nombreGrupo,
-      'Puntaje Final Promedio': resultado.puntajeFinal,
-      'Total de Evaluadores': resultado.juradosEvaluadores
-    }));
+  if (fase === 'CARGANDO' || grupos.length === 0) {
+    return <div className="min-h-screen bg-slate-900 flex justify-center items-center text-white text-3xl">Cargando resultados oficiales o esperando calificaciones...</div>;
+  }
 
-    // 2. Crear el libro y la hoja
-    const hoja = XLSX.utils.json_to_sheet(datosExportar);
-    const libro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(libro, hoja, 'Resultados Oficiales');
+  const ganadorActual = grupos[posicionActual - 1];
 
-    // 3. Ajustar el ancho de las columnas (opcional para mejor estética)
-    hoja['!cols'] = [{ wch: 10 }, { wch: 40 }, { wch: 25 }, { wch: 20 }];
-
-    // 4. Descargar el archivo
-    XLSX.writeFile(libro, 'Resultados_Concurso.xlsx');
+  const revelarLugar = () => setFase('REVELADO');
+  const siguienteLugar = () => {
+    if (posicionActual > 1) {
+      setPosicionActual(prev => prev - 1);
+      setFase('ESPERA');
+    } else {
+      setFase('PODIO');
+    }
   };
 
-  // Función para exportar el Acta en PDF
-  const exportarPDF = () => {
-    if (resultados.length === 0) return;
+  if (fase === 'PODIO') {
+    return (
+      <main className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8 overflow-hidden text-white relative">
+        <div className="absolute inset-0 bg-[url('/images/hero-illustration.svg')] opacity-10 bg-cover bg-center"></div>
+        <h1 className="text-5xl md:text-7xl font-extrabold mb-20 text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-600 animate-fade-in-up z-10">
+          ¡PODIO OFICIAL!
+        </h1>
+        
+        <div className="flex items-end justify-center gap-4 md:gap-12 h-96 z-10 w-full max-w-5xl">
+          {grupos[1] && (
+            <div className="flex flex-col items-center w-1/3 animate-slide-up" style={{ animationDelay: '0.5s' }}>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-300 text-center mb-4">{grupos[1].nombre}</h2>
+              <div className="w-full bg-gradient-to-t from-gray-500 to-gray-300 h-64 rounded-t-lg shadow-2xl flex justify-center items-start pt-4 border-t-4 border-gray-200">
+                <span className="text-5xl font-black text-gray-700">2</span>
+              </div>
+            </div>
+          )}
+          
+          {grupos[0] && (
+            <div className="flex flex-col items-center w-1/3 animate-zoom-in" style={{ animationDelay: '1.5s' }}>
+              <div className="text-yellow-400 text-6xl mb-2 animate-bounce">👑</div>
+              <h2 className="text-3xl md:text-5xl font-black text-gold-shine text-center mb-4 leading-tight">{grupos[0].nombre}</h2>
+              <div className="w-full bg-gradient-to-t from-yellow-600 to-yellow-400 h-80 rounded-t-lg shadow-2xl flex justify-center items-start pt-6 border-t-4 border-yellow-200 relative overflow-hidden">
+                <div className="absolute inset-0 bg-white opacity-20 animate-pulse"></div>
+                <span className="text-7xl font-black text-yellow-900 z-10">1</span>
+              </div>
+            </div>
+          )}
 
-    const doc = new jsPDF();
-    
-    // Título del documento
-    doc.setFontSize(18);
-    doc.text('Acta Oficial de Resultados', 14, 22);
-    
-    // Fecha y metadatos
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    const fechaActual = new Date().toLocaleDateString('es-ES', { 
-      year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-    });
-    doc.text(`Generado el: ${fechaActual}`, 14, 30);
-
-    // Preparar datos para la tabla
-    const columnas = [['Posición', 'Grupo Musical', 'Puntaje Final', 'Evaluadores']];
-    const filas = resultados.map((resultado, index) => [
-      (index + 1).toString(),
-      resultado.nombreGrupo,
-      resultado.puntajeFinal.toFixed(2),
-      resultado.juradosEvaluadores.toString()
-    ]);
-
-    // Generar la tabla usando jspdf-autotable
-    autoTable(doc, {
-      head: columnas,
-      body: filas,
-      startY: 40,
-      theme: 'grid',
-      headStyles: { fillColor: [69, 58, 150] }, // Color temático basado en el proyecto
-      styles: { fontSize: 11, cellPadding: 4 },
-      alternateRowStyles: { fillColor: [245, 245, 245] }
-    });
-
-    // Firma o cierre al final de la página
-    const finalY = (doc as any).lastAutoTable.finalY || 40;
-    doc.text('_________________________________', 14, finalY + 30);
-    doc.text('Firma del Administrador / Validador', 14, finalY + 38);
-
-    doc.save('Acta_Premiacion.pdf');
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Panel de Premiación</h1>
-            <p className="text-gray-600 mt-2">Resultados oficiales y generación de actas</p>
-          </div>
-          <Link 
-            href="/admin/dashboard" 
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-          >
-            Volver al Dashboard
-          </Link>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex justify-end gap-4 mb-6">
-            <button
-              onClick={exportarExcel}
-              disabled={resultados.length === 0 || cargando}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition flex items-center gap-2"
-            >
-              Exportar Excel
-            </button>
-            <button
-              onClick={exportarPDF}
-              disabled={resultados.length === 0 || cargando}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition flex items-center gap-2"
-            >
-              Generar Acta PDF
-            </button>
-          </div>
-
-          {cargando ? (
-            <div className="text-center py-10 text-gray-500">Calculando resultados de la base de datos...</div>
-          ) : error ? (
-            <div className="text-center py-10 text-red-500">{error}</div>
-          ) : resultados.length === 0 ? (
-            <div className="text-center py-10 text-gray-500">Aún no hay calificaciones registradas en el sistema.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-100 text-gray-700">
-                    <th className="p-4 border-b font-semibold">Posición</th>
-                    <th className="p-4 border-b font-semibold">Grupo Musical</th>
-                    <th className="p-4 border-b font-semibold">Jurados Evaluadores</th>
-                    <th className="p-4 border-b font-semibold text-right">Puntaje Final</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resultados.map((resultado, index) => (
-                    <tr 
-                      key={resultado.grupoId} 
-                      className={`border-b hover:bg-gray-50 ${index === 0 ? 'bg-yellow-50' : index === 1 ? 'bg-gray-100' : index === 2 ? 'bg-orange-50' : ''}`}
-                    >
-                      <td className="p-4">
-                        <span className={`font-bold ${index < 3 ? 'text-lg' : 'text-gray-600'}`}>
-                          #{index + 1}
-                        </span>
-                      </td>
-                      <td className="p-4 font-medium text-gray-900">{resultado.nombreGrupo}</td>
-                      <td className="p-4 text-gray-600">{resultado.juradosEvaluadores} jurados</td>
-                      <td className="p-4 text-right font-bold text-gray-900 text-lg">
-                        {resultado.puntajeFinal.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {grupos[2] && (
+            <div className="flex flex-col items-center w-1/3 animate-slide-up" style={{ animationDelay: '1s' }}>
+              <h2 className="text-xl md:text-2xl font-bold text-amber-600 text-center mb-4">{grupos[2].nombre}</h2>
+              <div className="w-full bg-gradient-to-t from-amber-800 to-amber-600 h-48 rounded-t-lg shadow-2xl flex justify-center items-start pt-4 border-t-4 border-amber-400">
+                <span className="text-5xl font-black text-amber-950">3</span>
+              </div>
             </div>
           )}
         </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8 text-white relative">
+      <div className="absolute top-10 text-center w-full">
+        <h2 className="text-2xl text-gray-400 uppercase tracking-widest">Premiación Oficial</h2>
       </div>
-    </div>
+
+      {fase === 'ESPERA' ? (
+        <div className="text-center animate-pulse">
+          <h1 className="text-5xl md:text-7xl font-bold text-gray-200 mb-12">
+            El {posicionActual}° lugar es para...
+          </h1>
+          <div className="text-8xl">🥁</div>
+        </div>
+      ) : (
+        <div className={`text-center flex flex-col items-center ${
+            posicionActual === 1 ? 'animate-zoom-in' : 
+            posicionActual <= 3 ? 'animate-bounce-in' : 'animate-fade-in-up'
+          }`}>
+          <span className="text-3xl text-gray-400 mb-6 font-semibold uppercase tracking-widest">
+            {posicionActual === 1 ? '¡El ganador del primer lugar!' : `${posicionActual}° lugar`}
+          </span>
+          
+          <h1 className={`text-6xl md:text-9xl font-black mb-8 px-4 ${
+            posicionActual === 1 ? 'text-gold-shine' :
+            posicionActual === 2 ? 'text-gray-300 drop-shadow-lg' :
+            posicionActual === 3 ? 'text-amber-600 drop-shadow-lg' :
+            'text-[#029062]'
+          }`}>
+            {ganadorActual?.nombre}
+          </h1>
+          
+          <div className="bg-slate-800 border border-slate-700 px-8 py-4 rounded-2xl shadow-xl">
+            <p className="text-2xl text-gray-300">Puntaje Final: <span className="text-[#e8af2e] font-bold text-4xl ml-2">{ganadorActual?.puntajePromedioFinal.toFixed(2)}</span></p>
+          </div>
+        </div>
+      )}
+
+      {/* Controles de Administrador Integrados */}
+      <div className="fixed bottom-0 w-full p-6 flex justify-between items-center opacity-10 hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-black to-transparent z-50">
+        <div>
+          {fase === 'ESPERA' ? (
+            <button onClick={revelarLugar} className="bg-[#453A96] hover:bg-[#362d7a] text-white font-bold py-3 px-8 rounded-full shadow-2xl text-xl">
+              Revelar Ganador
+            </button>
+          ) : (
+            <button onClick={siguienteLugar} className="bg-[#029062] hover:bg-[#01704b] text-white font-bold py-3 px-8 rounded-full shadow-2xl text-xl">
+              {posicionActual > 1 ? 'Siguiente Lugar' : 'Mostrar Podio Final'}
+            </button>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function CeremoniaPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-900 text-white flex justify-center items-center">Cargando...</div>}>
+      <CeremoniaContenido />
+    </Suspense>
   );
 }

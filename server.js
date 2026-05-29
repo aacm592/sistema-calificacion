@@ -118,6 +118,11 @@ app.prepare().then(() => {
     // Al conectar un nuevo cliente, calculamos y enviamos el estado directo de BD
     await emitirEstadoGlobal(io);
 
+    // NUEVO: Escuchar petición explícita del frontend para la ceremonia
+    socket.on('solicitarEstado', async () => {
+      await emitirEstadoGlobal(io);
+    });
+
     socket.on('disconnect', () => {
       console.log(`[Socket] Cliente desconectado: ${socket.id}`);
     });
