@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
@@ -60,10 +61,19 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#223164] hover:bg-[#0e2043] text-white font-bold py-3 px-4 rounded-xl transition-colors disabled:opacity-50 shadow-md"
+            className="w-full bg-[#223164] hover:bg-[#0e2043] text-white font-bold py-3 px-4 rounded-xl transition-colors disabled:opacity-50 shadow-md cursor-pointer"
           >
             {loading ? 'Verificando...' : 'Ingresar'}
           </button>
+
+          <div className="pt-2 text-center border-t border-gray-100">
+            <Link 
+              href="/demo" 
+              className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold inline-flex items-center gap-1 hover:underline"
+            >
+              <span>Ver demostración sin contraseña</span>
+            </Link>
+          </div>
         </form>
       </div>
     </main>

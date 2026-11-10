@@ -1,6 +1,7 @@
 import { Navbar } from '@/components/layout/Navbar';
 import { RoleCard } from '@/components/ui/RoleCard';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function Home() {
   return (
@@ -27,22 +28,33 @@ export default function Home() {
           </h2>
         </section>
 
-        {/* Sección Derecha/Inferior: Selección de Roles */}
-        {/* En móviles (por defecto) es flex-col, en escritorio es md:flex-row */}
-        <section className="flex flex-col sm:flex-row md:flex-row items-center justify-center gap-6 md:gap-12 flex-1 w-full">
-          <RoleCard
-            title="Soy administrador"
-            iconPath="/images/admin-icon.svg"
-            href="/admin"
-            buttonColor="bg-[#223164] hover:bg-[#0e2043]"
-          />
-          
-          <RoleCard
-            title="Soy jurado"
-            iconPath="/images/jury-icon.svg"
-            href="/jurado/ingreso"
-            buttonColor="bg-[#e8af2e] hover:bg-[#d49f25]"
-          />
+        {/* Sección Derecha/Inferior: Selección de Roles y Demostración */}
+        <section className="flex flex-col items-center justify-center gap-6 flex-1 w-full">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full">
+            <RoleCard
+              title="Soy administrador"
+              iconPath="/images/admin-icon.svg"
+              href="/admin"
+              buttonColor="bg-[#223164] hover:bg-[#0e2043]"
+            />
+            
+            <RoleCard
+              title="Soy jurado"
+              iconPath="/images/jury-icon.svg"
+              href="/jurado/ingreso"
+              buttonColor="bg-[#e8af2e] hover:bg-[#d49f25]"
+            />
+          </div>
+
+          {/* Acceso a Modo Demostración */}
+          <div className="w-full max-w-[584px]">
+            <Link
+              href="/demo"
+              className="block p-4 bg-[#223164] hover:bg-[#0e2043] text-white text-center rounded-2xl transition-colors"
+            >
+              <span className="font-extrabold text-sm sm:text-base">Modo Demostración</span>
+            </Link>
+          </div>
         </section>
 
       </div>

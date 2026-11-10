@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { getSocket } from '@/lib/socketClient';
 import { Navbar } from '@/components/layout/Navbar';
 
@@ -154,9 +155,17 @@ export default function JuradoIngresoPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">URL Foto de Perfil (Opcional)</label>
               <input type="url" value={foto} onChange={(e) => setFoto(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#453A96] text-black" placeholder="https://..." />
             </div>
-            <button type="submit" className="w-full bg-[#453A96] hover:bg-[#362d7a] text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-md mt-4">
+            <button type="submit" className="w-full bg-[#453A96] hover:bg-[#362d7a] text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-md mt-4 cursor-pointer">
               Solicitar Unirse al Evento
             </button>
+            <div className="pt-2 text-center border-t border-gray-100 mt-2">
+              <Link 
+                href="/demo" 
+                className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold inline-flex items-center gap-1 hover:underline"
+              >
+                <span>Modo demostración</span>
+              </Link>
+            </div>
           </form>
         </div>
       </main>
@@ -169,6 +178,12 @@ export default function JuradoIngresoPage() {
         <div className="w-16 h-16 border-4 border-[#029062] border-t-transparent rounded-full animate-spin mb-6"></div>
         <h2 className="text-2xl font-bold text-[#0e2043]">Esperando aprobación...</h2>
         <p className="text-gray-600 mt-2 max-w-md">Tu solicitud ha sido enviada al administrador. Esta pantalla se actualizará automáticamente cuando seas aceptado.</p>
+        <Link 
+          href="/demo" 
+          className="mt-6 text-xs text-emerald-700 hover:text-emerald-800 font-semibold inline-flex items-center gap-1 hover:underline bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200"
+        >
+          <span>Modo demostración</span>
+        </Link>
       </main>
     );
   }

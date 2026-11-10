@@ -155,7 +155,7 @@ function CeremoniaContenido() {
   return (
     <main className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8 text-white relative">
       <div className="absolute top-10 text-center w-full">
-        <h2 className="text-2xl text-gray-400 uppercase tracking-widest">Premiación Oficial</h2>
+        <h2 className="text-2xl text-gray-400 uppercase tracking-widest">Premiación oficial</h2>
       </div>
 
       {fase === 'ESPERA' ? (
@@ -184,7 +184,7 @@ function CeremoniaContenido() {
           </h1>
           
           <div className="bg-slate-800 border border-slate-700 px-8 py-4 rounded-2xl shadow-xl">
-            <p className="text-2xl text-gray-300">Puntaje Final: <span className="text-[#e8af2e] font-bold text-4xl ml-2">{ganadorActual?.puntajePromedioFinal.toFixed(2)}</span></p>
+            <p className="text-2xl text-gray-300">Puntaje final: <span className="text-[#e8af2e] font-bold text-4xl ml-2">{ganadorActual?.puntajePromedioFinal.toFixed(2)}</span></p>
           </div>
         </div>
       )}

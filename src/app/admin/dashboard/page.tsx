@@ -260,7 +260,7 @@ D) Originalidad e Identidad (${c.puntajes.originalidad || 0}/10)
         {/* BARRA LATERAL (Sidebar) */}
         <aside className="w-64 bg-white border-r border-gray-200 hidden md:block flex-shrink-0">
           <div className="p-6 border-b border-gray-100">
-            <h2 className="text-xl font-bold text-[#0e2043]">Admin Panel</h2>
+            <h2 className="text-xl font-bold text-[#0e2043]">Admin panel</h2>
           </div>
           <nav className="mt-4 flex flex-col">
             <button 
@@ -271,7 +271,7 @@ D) Originalidad e Identidad (${c.puntajes.originalidad || 0}/10)
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
-              Gestión de Evento
+              Gestión de evento
             </button>
             <button 
               onClick={() => setVistaActiva('calificaciones')}
@@ -291,7 +291,7 @@ D) Originalidad e Identidad (${c.puntajes.originalidad || 0}/10)
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
-              Ceremonia de Premiación
+              Premiación
             </button>
           </nav>
         </aside>
@@ -302,7 +302,7 @@ D) Originalidad e Identidad (${c.puntajes.originalidad || 0}/10)
           {/* VISTA 1: DASHBOARD (Gestión de Grupos y Jurados) */}
           {vistaActiva === 'dashboard' && (
             <>
-              <h1 className="text-3xl font-bold text-[#0e2043] mb-8">Gestión de Grupos y Jurados</h1>
+              <h1 className="text-3xl font-bold text-[#0e2043] mb-8">Gestión de grupos y jurados</h1>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 
                 {/* COLUMNA IZQUIERDA: Grupos */}
@@ -313,7 +313,7 @@ D) Originalidad e Identidad (${c.puntajes.originalidad || 0}/10)
                     <button type="submit" className="bg-[#223164] hover:bg-[#0e2043] text-white px-6 py-2 rounded-lg font-medium transition-colors">Agregar</button>
                   </form>
 
-                  <h3 className="text-md font-semibold text-gray-700 mb-4">Grupos Registrados</h3>
+                  <h3 className="text-md font-semibold text-gray-700 mb-4">Grupos registrados</h3>
                   <ul className="space-y-3">
                     {grupos.length === 0 ? <p className="text-sm text-gray-500">No hay grupos registrados.</p> : grupos.map((grupo) => (
                       <li key={grupo.id} className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg border border-gray-100">
@@ -345,7 +345,7 @@ D) Originalidad e Identidad (${c.puntajes.originalidad || 0}/10)
                 <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-6">
                   <div>
                     <h2 className="text-lg font-bold text-gray-800 mb-4 flex justify-between">
-                      Solicitudes Pendientes
+                      Solicitudes pendientes
                       {juradosPendientes.length > 0 && <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full">{juradosPendientes.length} Nuevas</span>}
                     </h2>
                     <ul className="space-y-3">
@@ -361,7 +361,7 @@ D) Originalidad e Identidad (${c.puntajes.originalidad || 0}/10)
                     </ul>
                   </div>
                   <div>
-                    <h3 className="text-md font-semibold text-gray-700 mb-4">Jurados Activos</h3>
+                    <h3 className="text-md font-semibold text-gray-700 mb-4">Jurados activos</h3>
                     <ul className="space-y-2">
                       {juradosAceptados.map((jurado) => (
                         <li key={jurado.id} className="flex justify-between items-center bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
@@ -391,7 +391,7 @@ D) Originalidad e Identidad (${c.puntajes.originalidad || 0}/10)
           {vistaActiva === 'calificaciones' && (
             <>
               <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-[#0e2043]">Tabla de Puntuaciones</h1>
+                <h1 className="text-3xl font-bold text-[#0e2043]">Tabla de puntuaciones</h1>
                 
                 {/* Botones de Exportación UI enlazados a las funciones */}
                 <div className="flex gap-4">
@@ -420,7 +420,7 @@ D) Originalidad e Identidad (${c.puntajes.originalidad || 0}/10)
                           </th>
                         ))}
                         
-                        <th className="p-4 font-bold whitespace-nowrap text-center text-[#e8af2e]">PROMEDIO</th>
+                        <th className="p-4 font-bold whitespace-nowrap text-center text-[#e8af2e]">PROMEDIO FINAL</th>
                         <th className="p-4 font-bold whitespace-nowrap text-center text-white">ACCIONES</th>
                       </tr>
                     </thead>
@@ -496,7 +496,7 @@ D) Originalidad e Identidad (${c.puntajes.originalidad || 0}/10)
                 >
                   Iniciar Presentación (Nueva Pestaña)
                 </button>
-                <p className="text-sm text-gray-400 mt-2">Se abrirá en una nueva pestaña ideal para arrastrar a un proyector.</p>
+                <p className="text-sm text-gray-400 mt-2">Se abrirá en una nueva pestaña.</p>
               </div>
             </div>
           )}
